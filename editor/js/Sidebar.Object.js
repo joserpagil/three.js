@@ -106,6 +106,58 @@ function SidebarObject( editor ) {
 
 	container.add( objectNameRow );
 
+	// sound
+
+	const objectSoundRow        = new UIRow();
+	const objectSoundFileButton = new UIButton( strings.getKey( 'sidebar/object/open' ) ).setMarginLeft( '7px' ).onClick( function () {
+		const file_button                 = document.createElement ( 'input' )
+		file_button. type                 = 'file'
+		const file_button_change_listener = args => {
+			file_button.removeEventListener ( 'change' , file_button_change_listener , false )
+			
+			const fileReader      = new FileReader ()
+			fileReader.onload = function ( event ) {	
+				const fileReader = event.target
+				const file_64    = fileReader.result
+							
+				const object     = editor.selected;
+				object.userData  = { filename : file_button.files [ 0 ].name , 
+				                     file_64 , 
+									 loop     : objectSoundLoop.getValue ()}
+
+				const audio      = new Audio ( file_64 )
+				audio.loop       = object.userData.loop
+				audio.play       ()
+			}
+			fileReader . readAsDataURL ( file_button.files [ 0 ])				
+		}
+		file_button . addEventListener  ( 'change' , file_button_change_listener , false )
+		file_button . click             ()						
+	} );
+	const objectSoundPlayButton = new UIButton( strings.getKey( 'sidebar/object/play' ) ).setMarginLeft( '7px' ).onClick( function () {
+		const object = editor.selected;
+		if ( ! ( 'file_64' in object.userData )) return
+		
+		const audio  = new Audio ( object.userData.file_64 )
+		audio.loop   = object.userData.loop
+		audio.play   ()
+	} );
+	const objectSoundLoop       = new UICheckbox().onChange ( event =>{
+		const object = editor.selected;
+		if ( ! ( 'loop' in object.userData )) return
+			object.userData.loop  = objectSoundLoop.getValue ()
+	});
+
+	objectSoundRow.add      ( new UIText( strings.getKey( 'sidebar/object/sound' ) ).setWidth( '90px' ) );
+	objectSoundRow.add      ( objectSoundFileButton );
+	objectSoundRow.add      ( objectSoundPlayButton );
+	objectSoundRow.add      ( objectSoundLoop );
+	objectSoundRow.add      ( new UIText( strings.getKey( 'sidebar/object/loop' ) ).setWidth( '90px' ) );	
+
+	objectSoundRow.setDisplay ( '' );
+	
+	container.add          ( objectSoundRow );	
+
 	// position
 
 	const objectPositionRow = new UIRow();
