@@ -105,11 +105,11 @@ function SidebarObject( editor ) {
 	objectNameRow.add( objectName );
 
 	container.add( objectNameRow );
-
+	
 	// sound
 
 	const objectSoundRow        = new UIRow();
-	const objectSoundFileButton = new UIButton( strings.getKey( 'sidebar/object/open' ) ).setMarginLeft( '7px' ).onClick( function () {
+	const objectSoundFileButton = new UIButton( strings.getKey( 'sidebar/object/sound_open' ) ).setMarginLeft( '7px' ).onClick( function () {
 		const file_button                 = document.createElement ( 'input' )
 		file_button. type                 = 'file'
 		const file_button_change_listener = args => {
@@ -134,7 +134,7 @@ function SidebarObject( editor ) {
 		file_button . addEventListener  ( 'change' , file_button_change_listener , false )
 		file_button . click             ()						
 	} );
-	const objectSoundPlayButton = new UIButton( strings.getKey( 'sidebar/object/play' ) ).setMarginLeft( '7px' ).onClick( function () {
+	const objectSoundPlayButton = new UIButton( strings.getKey( 'sidebar/object/sound_play' ) ).setMarginLeft( '7px' ).onClick( function () {
 		const object = editor.selected;
 		if ( ! ( 'file_64' in object.userData )) return
 		
@@ -148,15 +148,64 @@ function SidebarObject( editor ) {
 			object.userData.loop  = objectSoundLoop.getValue ()
 	});
 
-	objectSoundRow.add      ( new UIText( strings.getKey( 'sidebar/object/sound' ) ).setWidth( '90px' ) );
-	objectSoundRow.add      ( objectSoundFileButton );
-	objectSoundRow.add      ( objectSoundPlayButton );
-	objectSoundRow.add      ( objectSoundLoop );
-	objectSoundRow.add      ( new UIText( strings.getKey( 'sidebar/object/loop' ) ).setWidth( '90px' ) );	
+	objectSoundRow.add          ( new UIText( strings.getKey( 'sidebar/object/sound' ) ).setWidth( '90px' ) );
+	objectSoundRow.add          ( objectSoundFileButton );
+	objectSoundRow.add          ( objectSoundPlayButton );
+	objectSoundRow.add          ( objectSoundLoop );
+	objectSoundRow.add          ( new UIText( strings.getKey( 'sidebar/object/sound_loop' ) ).setWidth( '90px' ) );	
 
-	objectSoundRow.setDisplay ( '' );
+	objectSoundRow.setDisplay   ( '' );
 	
-	container.add          ( objectSoundRow );	
+	container.add               ( objectSoundRow );	
+
+	// video
+
+	const objectVideoRow        = new UIRow      ();
+	const objectVideoFileButton = new UIButton   ( strings.getKey ( 'sidebar/object/video_open' ) ).setMarginLeft ( '7px' ).onClick ( function () {
+		const file_button                 = document.createElement ( 'input' )
+		file_button. type                 = 'file'
+		const file_button_change_listener = args => {
+			file_button.removeEventListener ( 'change' , file_button_change_listener , false )
+			
+			const fileReader      = new FileReader ()
+			fileReader.onload = function ( event ) {	
+				const fileReader    = event.target
+				const video_file_64 = fileReader.result
+							
+				const object     = editor.selected;
+				object.userData  = { video_filename : file_button.files [ 0 ].name , 
+				                     video_file_64 , 
+									 video_loop     : objectVideoLoop.getValue (),
+									 video_play     : 'const v=document.createElement("video");v.src=this.userData.video_file_64;this.material.map=new THREE.VideoTexture(v);v.play()'}
+			}
+			fileReader . readAsDataURL ( file_button.files [ 0 ])				
+		}
+		file_button . addEventListener  ( 'change' , file_button_change_listener , false )
+		file_button . click             ()						
+	} );
+	const objectVideoPlayButton = new UIButton   ( strings.getKey ( 'sidebar/object/video_play' ) ).setMarginLeft ( '7px' ).onClick ( function () {
+		const object = editor.selected;
+		if ( ! ( 'file_64' in object.userData )) return
+		
+		const video  = document.createElement ( 'video' )
+		video.loop   = object.userData.loop
+		video.play   ()
+	} );
+	const objectVideoLoop       = new UICheckbox ().onChange ( event =>{
+		const object = editor.selected;
+		if ( ! ( 'loop' in object.userData )) return
+			object.userData.loop  = objectVideoLoop.getValue ()
+	});
+
+	objectVideoRow.add          ( new UIText( strings.getKey( 'sidebar/object/video' ) ).setWidth( '90px' ) );
+	objectVideoRow.add          ( objectVideoFileButton );
+	objectVideoRow.add          ( objectVideoPlayButton );
+	objectVideoRow.add          ( objectVideoLoop );
+	objectVideoRow.add          ( new UIText( strings.getKey( 'sidebar/object/video_loop' ) ).setWidth( '90px' ) );	
+
+	objectVideoRow.setDisplay   ( '' );
+	
+	container.add               ( objectVideoRow );	
 
 	// position
 
@@ -167,8 +216,8 @@ function SidebarObject( editor ) {
 
 	objectPositionRow.add( new UIText( strings.getKey( 'sidebar/object/position' ) ).setWidth( '90px' ) );
 	objectPositionRow.add( objectPositionX, objectPositionY, objectPositionZ );
-
-	container.add( objectPositionRow );
+	
+	container.add( objectPositionRow );	
 
 	// rotation
 
@@ -639,8 +688,10 @@ function SidebarObject( editor ) {
 
 	}
 
-	function updateRows( object ) {
-
+	function updateRows( object ) { //xxx
+	
+		//objectSoundRow.setDisplay ( 'none' );
+	
 		const properties = {
 			'fov': objectFovRow,
 			'left': objectLeftRow,
@@ -694,7 +745,11 @@ function SidebarObject( editor ) {
 			objectShadowRow.setDisplay( 'none' );
 
 		}
-
+/*		
+		if ( object.isSound ) {
+			objectSoundRow.setDisplay ( '' );
+		}
+*/
 	}
 
 	function updateTransformRows( object ) {
@@ -709,14 +764,14 @@ function SidebarObject( editor ) {
 
 			objectRotationRow.setDisplay( '' );
 			objectScaleRow.setDisplay( '' );
-
+		
 		}
 
 	}
 
 	// events
 
-	signals.objectSelected.add( function ( object ) {
+	signals.objectSelected.add( function ( object ) { //xxx
 
 		if ( object !== null ) {
 
