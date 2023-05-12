@@ -103,6 +103,7 @@ function Strings( config ) {
 			'sidebar/object/name': 'Name',
 			'sidebar/object/sound': 'Sound',
 			'sidebar/object/sound_open': 'Open',
+			'sidebar/object/clear'     : 'Clear',
 			'sidebar/object/sound_play': 'Play',
 			'sidebar/object/sound_loop': 'Loop',
 			'sidebar/object/video': 'Video',
