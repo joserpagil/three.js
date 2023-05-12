@@ -108,8 +108,8 @@ function SidebarObject( editor ) {
 	
 	// sound
 
-	const objectSoundRow        = new UIRow();
-	const objectSoundFileButton = new UIButton( strings.getKey( 'sidebar/object/sound_open' ) ).setMarginLeft( '7px' ).onClick( function () {
+	const objectSoundRow          = new UIRow      ();
+	const objectSoundFileButton   = new UIButton   ( strings.getKey( 'sidebar/object/sound_open' ) ).setMarginLeft( '7px' ).onClick ( function () {
 		const file_button                 = document.createElement ( 'input' )
 		file_button. type                 = 'file'
 		const file_button_change_listener = args => {
@@ -117,51 +117,74 @@ function SidebarObject( editor ) {
 			
 			const fileReader      = new FileReader ()
 			fileReader.onload = function ( event ) {	
-				const fileReader = event.target
-				const file_64    = fileReader.result
+				const fileReader    = event.target
+				const sound_file_64 = fileReader.result
 							
 				const object     = editor.selected;
-				object.userData  = { filename : file_button.files [ 0 ].name , 
-				                     file_64 , 
-									 loop     : objectSoundLoop.getValue ()}
-
-				const audio      = new Audio ( file_64 )
-				audio.loop       = object.userData.loop
-				audio.play       ()
+				object.userData  = { sound_filename : file_button.files [ 0 ].name , 
+				                     sound_file_64 , 
+									 sound_loop     : objectSoundLoop.getValue () ,
+									 sound_play     : 'this.a=new Audio();this.a.loop=this.userData.sound_loop;this.a.src=this.userData.audio_file_64;this.a.play()' ,
+									 sound_stop     : 'this.a.pause()'}
 			}
 			fileReader . readAsDataURL ( file_button.files [ 0 ])				
 		}
 		file_button . addEventListener  ( 'change' , file_button_change_listener , false )
 		file_button . click             ()						
 	} );
-	const objectSoundPlayButton = new UIButton( strings.getKey( 'sidebar/object/sound_play' ) ).setMarginLeft( '7px' ).onClick( function () {
+	const objectSoundClearButton  = new UIButton   ( strings.getKey( 'sidebar/object/clear' ) ).setMarginLeft( '7px' ).onClick ( function (){
 		const object = editor.selected;
-		if ( ! ( 'file_64' in object.userData )) return
+		if ( ! ( 'sound_file_64' in object.userData )) return	
+
+		objectSoundPlayButton.audio.pause    ()
+		objectSoundPlayButton.setTextContent ( 'play' )
+			
+		objectSoundLoop.value       = false
+		object.userData.sound_loop  = objectSoundLoop.getValue ()
 		
-		const audio  = new Audio ( object.userData.file_64 )
-		audio.loop   = object.userData.loop
-		audio.play   ()
-	} );
-	const objectSoundLoop       = new UICheckbox().onChange ( event =>{
+		delete object.userData.sound_file_64
+	})
+	const objectSoundPlayButton   = new UIButton   ( strings.getKey( 'sidebar/object/sound_play' ) ).setMarginLeft( '7px' )
+	objectSoundPlayButton.onClick ( function () {
 		const object = editor.selected;
-		if ( ! ( 'loop' in object.userData )) return
-			object.userData.loop  = objectSoundLoop.getValue ()
+		if ( ! ( 'sound_file_64' in object.userData )) return
+		
+		if ( objectSoundPlayButton.dom.textContent.toLowerCase () == 'stop' ) {
+			objectSoundPlayButton.audio.pause    ()
+			objectSoundPlayButton.setTextContent ( 'play' )
+		} else {
+			const audio  = new Audio ( object.userData.sound_file_64 )
+			audio.loop   = object.userData.sound_loop
+			objectSoundPlayButton.setTextContent ( 'stop' )
+			objectSoundPlayButton.audio = audio
+			audio.addEventListener ( 'ended' , event =>{
+				audio.pause();
+				objectSoundPlayButton.setTextContent ( 'play' )
+			}, false );
+			audio.play ()
+		}
 	});
-
-	objectSoundRow.add          ( new UIText( strings.getKey( 'sidebar/object/sound' ) ).setWidth( '90px' ) );
-	objectSoundRow.add          ( objectSoundFileButton );
-	objectSoundRow.add          ( objectSoundPlayButton );
-	objectSoundRow.add          ( objectSoundLoop );
-	objectSoundRow.add          ( new UIText( strings.getKey( 'sidebar/object/sound_loop' ) ).setWidth( '90px' ) );	
-
-	objectSoundRow.setDisplay   ( '' );
+	const objectSoundLoop         = new UICheckbox ().onChange ( event =>{
+		const object = editor.selected;
+		if ( ! ( 'sound_loop' in object.userData )) return
+			object.userData.sound_loop  = objectSoundLoop.getValue ()
+	});
 	
-	container.add               ( objectSoundRow );	
+	objectSoundRow.add            ( new UIText( strings.getKey( 'sidebar/object/sound' ) ).setWidth( '90px' ) );
+	objectSoundRow.add            ( objectSoundFileButton );
+	objectSoundRow.add            ( objectSoundClearButton );
+	objectSoundRow.add            ( objectSoundPlayButton );
+	objectSoundRow.add            ( objectSoundLoop );
+	objectSoundRow.add            ( new UIText( strings.getKey( 'sidebar/object/sound_loop' ) ).setWidth( '90px' ) );	
+
+	objectSoundRow.setDisplay     ( '' );
+	
+	container.add                 ( objectSoundRow );	
 
 	// video
 
-	const objectVideoRow        = new UIRow      ();
-	const objectVideoFileButton = new UIButton   ( strings.getKey ( 'sidebar/object/video_open' ) ).setMarginLeft ( '7px' ).onClick ( function () {
+	const objectVideoRow         = new UIRow      ();
+	const objectVideoFileButton  = new UIButton   ( strings.getKey ( 'sidebar/object/video_open' ) ).setMarginLeft ( '7px' ).onClick ( function () {
 		const file_button                 = document.createElement ( 'input' )
 		file_button. type                 = 'file'
 		const file_button_change_listener = args => {
@@ -176,30 +199,32 @@ function SidebarObject( editor ) {
 				object.userData  = { video_filename : file_button.files [ 0 ].name , 
 				                     video_file_64 , 
 									 video_loop     : objectVideoLoop.getValue (),
-									 video_play     : 'const v=document.createElement("video");v.src=this.userData.video_file_64;this.material.map=new THREE.VideoTexture(v);v.play()'}
+									 video_play     : 'this.v=document.createElement("video");this.loop=this.userData.video_loop;this.v.src=this.userData.video_file_64;this.material.map=new THREE.VideoTexture(this.v);this.v.play()' ,
+				                     video_stop     : 'this.v.pause()'}
 			}
 			fileReader . readAsDataURL ( file_button.files [ 0 ])				
 		}
 		file_button . addEventListener  ( 'change' , file_button_change_listener , false )
 		file_button . click             ()						
-	} );
-	const objectVideoPlayButton = new UIButton   ( strings.getKey ( 'sidebar/object/video_play' ) ).setMarginLeft ( '7px' ).onClick ( function () {
+	});
+	const objectVideoClearButton = new UIButton   ( strings.getKey ( 'sidebar/object/clear' ) ).setMarginLeft( '7px' ).onClick ( function (){
 		const object = editor.selected;
-		if ( ! ( 'file_64' in object.userData )) return
+		if ( ! ( 'video_file_64' in object.userData )) return	
+
+		objectVideoLoop.value       = false
+		object.userData.video_loop  = objectVideoLoop.getValue ()
 		
-		const video  = document.createElement ( 'video' )
-		video.loop   = object.userData.loop
-		video.play   ()
-	} );
-	const objectVideoLoop       = new UICheckbox ().onChange ( event =>{
+		delete object.userData.video_file_64
+	})
+	const objectVideoLoop        = new UICheckbox ().onChange ( event =>{
 		const object = editor.selected;
-		if ( ! ( 'loop' in object.userData )) return
-			object.userData.loop  = objectVideoLoop.getValue ()
+		if ( ! ( 'video_loop' in object.userData )) return
+			object.userData.video_loop = objectVideoLoop.getValue ()
 	});
 
 	objectVideoRow.add          ( new UIText( strings.getKey( 'sidebar/object/video' ) ).setWidth( '90px' ) );
 	objectVideoRow.add          ( objectVideoFileButton );
-	objectVideoRow.add          ( objectVideoPlayButton );
+	objectVideoRow.add          ( objectVideoClearButton );
 	objectVideoRow.add          ( objectVideoLoop );
 	objectVideoRow.add          ( new UIText( strings.getKey( 'sidebar/object/video_loop' ) ).setWidth( '90px' ) );	
 
@@ -810,6 +835,9 @@ function SidebarObject( editor ) {
 
 		objectUUID.setValue( object.uuid );
 		objectName.setValue( object.name );
+		
+		if ( 'sound_loop' in object.userData ) objectSoundLoop.setValue ( object.userData.sound_loop )
+		else                                   objectSoundLoop.setValue ( false )
 
 		objectPositionX.setValue( object.position.x );
 		objectPositionY.setValue( object.position.y );
