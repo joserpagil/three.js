@@ -199,7 +199,7 @@ function SidebarObject( editor ) {
 				object.userData  = { video_filename : file_button.files [ 0 ].name , 
 				                     video_file_64 , 
 									 video_loop     : objectVideoLoop.getValue (),
-									 video_play     : 'this.v=document.createElement("video");this.loop=this.userData.video_loop;this.v.src=this.userData.video_file_64;this.material.map=new THREE.VideoTexture(this.v);this.v.play()' ,
+									 video_play     : 'this.v=document.createElement("video");this.v.loop=this.userData.video_loop;this.v.src=this.userData.video_file_64;this.material.map=new THREE.VideoTexture(this.v);this.v.play()' ,
 				                     video_stop     : 'this.v.pause()'}
 			}
 			fileReader . readAsDataURL ( file_button.files [ 0 ])				
