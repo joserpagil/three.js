@@ -124,7 +124,7 @@ function SidebarObject( editor ) {
 				object.userData  = { sound_filename : file_button.files [ 0 ].name , 
 				                     sound_file_64 , 
 									 sound_loop     : objectSoundLoop.getValue () ,
-									 sound_play     : 'this.a=new Audio();this.a.loop=this.userData.sound_loop;this.a.src=this.userData.audio_file_64;this.a.play()' ,
+									 sound_play     : 'this.a=new Audio();this.a.loop=this.userData.sound_loop;this.a.src=this.userData.sound_file_64;this.a.play()' ,
 									 sound_stop     : 'this.a.pause()'}
 			}
 			fileReader . readAsDataURL ( file_button.files [ 0 ])				
