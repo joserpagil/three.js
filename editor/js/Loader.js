@@ -926,7 +926,17 @@ function Loader( editor ) {
 			const extension = path.split( '.' ).pop().toLowerCase();
 
 			switch ( extension ) {
-
+				
+				case 'json':
+				
+				{
+					if ( 'handle_json_file' in editor ){
+						editor.handle_json_file ( file )
+					}
+					
+					break;
+				}
+				
 				case 'fbx':
 
 				{
