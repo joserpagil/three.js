@@ -4,6 +4,10 @@ import { zipSync, strToU8 } from 'three/addons/libs/fflate.module.js';
 
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
 
+import { Loader } from './Loader.js';
+
+import { AddObjectCommand } from './commands/AddObjectCommand.js';
+
 function MenubarFile( editor ) {
 
 	const config = editor.config;
@@ -38,6 +42,180 @@ function MenubarFile( editor ) {
 	options.add( option );
 
 	//
+	
+	options.add( new UIHorizontalRule() );
+
+	// Publish with external media
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( strings.getKey( 'menubar/file/publish_with_external_media' ) );
+	option.onClick( async function () {
+
+		const toZip = {};
+
+		//
+
+		let output = editor.toJSON ();
+		
+		output.metadata.type = 'App';
+		
+		delete output.history;
+		
+		const scene = editor.scene		
+		
+		delete output.scene.geometries
+		delete output.scene.materials
+		delete output.scene.object.children
+		
+		let textures           = []
+		let images             = []
+		if ( 'background'  in output.scene.object ){
+			for ( const texture of output.scene.textures )
+				if ( texture.uuid == output.scene.object.background ){
+					textures.push ( texture )
+					for ( const image of output.scene.images )
+						if ( image.uuid == texture.image )
+							images.push ( image )
+				}
+		}
+		if ( 'environment' in output.scene.object ){
+			for ( const texture of output.scene.textures )
+				if ( texture.uuid == output.scene.object.environment ){
+					textures.push ( texture )
+					for ( const image of output.scene.images )
+						if ( image.uuid == texture.image )
+							images.push ( image )
+				}
+		}
+		
+		delete output.scene.textures
+		delete output.scene.images
+		
+		if ( textures.length ) output.scene.textures = textures
+		if ( images.length   ) output.scene.images   = images
+		
+		output = JSON.stringify( output, null, '\t' );
+		output = output.replace( /[\n\t]+([\d\.e\-\[\]]+)/g, '$1' );
+
+		toZip[ 'app.json' ] = strToU8( output );
+
+		const animations = getAnimations( scene );
+		scene.traverse ( child =>{
+			child.name += ',' + child.uuid
+		})
+		const { GLTFExporter } = await import( 'three/addons/exporters/GLTFExporter.js' );
+		const exporter = new GLTFExporter();
+		exporter.parse( scene, function ( result ) {
+			toZip[ 'scene.glb' ] = new Uint8Array ( result );
+						
+			const title = config.getKey( 'project/title' );
+
+			const manager = new THREE.LoadingManager( function () {
+				
+				const zipped = zipSync( toZip, { level: 9 } );
+
+				const blob = new Blob( [ zipped.buffer ], { type: 'application/zip' } );
+
+				save( blob, ( title !== '' ? title : 'untitled' ) + '.zip' );
+
+			} );
+
+			const loader = new THREE.FileLoader( manager );
+			loader.load( 'js/libs/app/index.html', function ( content ) {
+
+				content = content.replace( '<!-- title -->', title );
+
+				const includes = [];
+
+				content = content.replace( '<!-- includes -->', includes.join( '\n\t\t' ) );
+
+				let editButton = '';
+
+				if ( config.getKey( 'project/editable' ) ) {
+
+					editButton = [
+						'			let button = document.createElement( \'a\' );',
+						'			button.href = \'https://threejs.org/editor/#file=\' + location.href.split( \'/\' ).slice( 0, - 1 ).join( \'/\' ) + \'/app.json\';',
+						'			button.style.cssText = \'position: absolute; bottom: 20px; right: 20px; padding: 10px 16px; color: #fff; border: 1px solid #fff; border-radius: 20px; text-decoration: none;\';',
+						'			button.target = \'_blank\';',
+						'			button.textContent = \'EDIT\';',
+						'			document.body.appendChild( button );',
+					].join( '\n' );
+
+				}
+
+				content = content.replace( '\t\t\t/* edit button */', editButton );
+
+				toZip[ 'index.html' ] = strToU8( content );
+
+			} );
+			loader.load( 'js/libs/app.js', function ( content ) {
+
+				toZip[ 'js/app.js' ] = strToU8( content );
+
+			} );
+			loader.load( '../build/three.module.js', function ( content ) {
+
+				toZip[ 'js/three.module.js' ] = strToU8( content );
+
+			} );
+			loader.load( '../examples/jsm/webxr/VRButton.js', function ( content ) {
+
+				toZip[ 'js/VRButton.js' ] = strToU8( content );
+
+			} );
+			
+		}, undefined, { binary: true, animations: animations } );
+	} );
+	options.add( option );
+
+	// Import with external media
+	
+	class loader_wem {
+		static loader  = new Loader( this );
+		
+		static execute ( add_object_command ){
+			const object = add_object_command.object
+
+			object.traverse ( child => {
+				console.log ( child.name )
+				const splits = child.name.split ( ',' )
+				child.name   = splits [ 0 ]
+				if ( splits.length > 1 ) child.uuid = splits [ 1 ]
+			})				
+			
+			editor.execute( new AddObjectCommand( editor, object ) );			
+		}
+		
+		static handle_json_file ( json_file ){
+			const json      = JSON.parse ( new TextDecoder().decode( json_file ) ); //String.fromCharCode.apply ( null, json_file ));
+			editor.fromJSON	( json )					
+		}
+	}
+	
+	const form_wem = document.createElement( 'form' );
+	form_wem.style.display = 'none';
+	document.body.appendChild( form_wem );
+
+	const fileInput_wem = document.createElement( 'input' );
+	fileInput_wem.multiple = true;
+	fileInput_wem.type = 'file';
+	fileInput_wem.addEventListener( 'change', function () {
+		loader_wem.loader.loadFiles ( fileInput_wem.files )
+		form_wem.reset();
+	} );
+	form_wem.appendChild( fileInput_wem );
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( strings.getKey( 'menubar/file/import_with_external_media' ) );
+	option.onClick( function () {
+		fileInput_wem.click();
+	} );
+	options.add( option );
+
+	//	
 
 	options.add( new UIHorizontalRule() );
 
@@ -240,7 +418,7 @@ function MenubarFile( editor ) {
 	option = new UIRow();
 	option.setClass( 'option' );
 	option.setTextContent( strings.getKey( 'menubar/file/export/glb' ) );
-	option.onClick( async function () {
+	option.onClick( async function ( ) {
 
 		const scene = editor.scene;
 		const animations = getAnimations( scene );
@@ -480,8 +658,6 @@ function MenubarFile( editor ) {
 
 	} );
 	options.add( option );
-
-	//
 
 	const link = document.createElement( 'a' );
 	function save( blob, filename ) {
